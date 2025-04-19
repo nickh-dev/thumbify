@@ -3,39 +3,36 @@
 import { useState } from "react"
 import { X, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/lib/AuthContext"
 
 export default function SignUpModal({ isOpen, onClose }) {
+  const { signUp, signInWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
+    password: ""
   })
   const [showPassword, setShowPassword] = useState(false)
   const [formStep, setFormStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setError(null) // Clear error when user types
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
   
     const { email, password } = formData
   
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    const { error } = await signUp(email, password)
   
     if (error) {
-      console.error(error)
-      alert("Ошибка: " + error.message)
+      setError(error.message)
     } else {
       setFormStep(1)
     }
@@ -45,21 +42,15 @@ export default function SignUpModal({ isOpen, onClose }) {
 
   const handleGoogleSignUp = async () => {
     setIsLoading(true)
+    setError(null)
   
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    const { error } = await signInWithGoogle()
   
     if (error) {
-      console.error(error)
-      alert("Ошибка при входе через Google")
+      setError(error.message)
       setIsLoading(false)
     }
   }
-  
 
   if (!isOpen) return null
 
@@ -90,6 +81,12 @@ export default function SignUpModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
+                {error && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm">
+                    {error}
+                  </div>
+                )}
+
                 {/* Google sign up button */}
                 <button
                   onClick={handleGoogleSignUp}
@@ -115,7 +112,7 @@ export default function SignUpModal({ isOpen, onClose }) {
                       fill="#EA4335"
                     />
                   </svg>
-                  Sign up with Google
+                  {isLoading ? "Connecting..." : "Sign up with Google"}
                 </button>
 
                 {/* Divider */}
@@ -156,6 +153,7 @@ export default function SignUpModal({ isOpen, onClose }) {
                         value={formData.password}
                         onChange={handleChange}
                         required
+                        minLength={8}
                         className="w-full bg-[#1a1a1a] border border-zinc-800 focus:border-zinc-600 rounded-md px-3 py-2.5 text-white focus:outline-none pr-10"
                       />
                       <button
@@ -196,9 +194,18 @@ export default function SignUpModal({ isOpen, onClose }) {
                 <div className="mt-6 text-center">
                   <p className="text-sm text-zinc-400">
                     Already have an account?{" "}
-                    <a href="#" className="text-white hover:underline font-medium">
+                    <button 
+                      onClick={() => {
+                        onClose()
+                        // Add a small delay to prevent modal overlap
+                        setTimeout(() => {
+                          document.dispatchEvent(new CustomEvent('open-login-modal'))
+                        }, 100)
+                      }}
+                      className="text-white hover:underline font-medium bg-transparent border-none p-0 cursor-pointer"
+                    >
                       Login
-                    </a>
+                    </button>
                   </p>
                 </div>
               </>
