@@ -1,5 +1,6 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { ArrowRight, Menu, X, Instagram, Twitter, Youtube, Linkedin } from "lucide-react"
 import SignUpModal from "@/components/sign-up-modal"
