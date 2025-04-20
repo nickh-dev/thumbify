@@ -5,8 +5,11 @@ import { Upload, Trash2, Wand2, AlertCircle, Check, Loader2, Plus } from "lucide
 import { cn } from "@/lib/utils"
 import StyleSelector from "./style-selector"
 import DeleteConfirmDialog from "./delete-confirm-dialog"
+import { useLanguage } from "@/lib/LanguageContext"
+import TransitionText from "./ui/transition-text"
 
 export default function ThumbnailGenerator() {
+  const { t } = useLanguage()
   const [uploadedImages, setUploadedImages] = useState([])
   const [isUploading, setIsUploading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -142,29 +145,33 @@ export default function ThumbnailGenerator() {
 
   return (
     <div className="flex flex-col">
-      <div className="max-w-5xl mx-auto w-full">
-        <h1 className="text-3xl font-bold text-white mb-8">Create New Thumbnails</h1>
+      <div className="w-full">
+        <h1 className="text-3xl font-bold text-white mb-8">
+          <TransitionText>{t('dashboard.createNew')}</TransitionText>
+        </h1>
 
         {/* Error and Success Messages */}
         {error && (
           <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-            <p className="text-red-200">{error}</p>
+            <p className="text-red-200"><TransitionText>{error}</TransitionText></p>
           </div>
         )}
 
         {success && (
           <div className="mb-6 p-4 bg-green-900/30 border border-green-800 rounded-lg flex items-start gap-3">
             <Check className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-            <p className="text-green-200">{success}</p>
+            <p className="text-green-200"><TransitionText>{success}</TransitionText></p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Left Column - Image Upload */}
           <div className="space-y-6">
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Upload Images</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                <TransitionText>{t('dashboard.uploadImages')}</TransitionText>
+              </h2>
 
               {/* Image Upload Area */}
               <div
@@ -212,7 +219,7 @@ export default function ThumbnailGenerator() {
                       className="w-full h-32 border-2 border-dashed border-zinc-700 hover:border-zinc-500 rounded-md flex flex-col items-center justify-center text-zinc-400 hover:text-white transition-colors duration-200"
                     >
                       <Plus className="h-8 w-8 mb-2" />
-                      <span className="text-sm">Add More</span>
+                      <span className="text-sm">{t('dashboard.addMore')}</span>
                     </button>
                   </div>
                 )}
@@ -224,8 +231,12 @@ export default function ThumbnailGenerator() {
                       <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
                         <Upload className="h-8 w-8 text-zinc-400" />
                       </div>
-                      <p className="text-zinc-300 mb-2">Drag and drop your images here</p>
-                      <p className="text-zinc-500 text-sm mb-4">or</p>
+                      <p className="text-zinc-300 mb-2">
+                        <TransitionText>{t('dashboard.dragDrop')}</TransitionText>
+                      </p>
+                      <p className="text-zinc-500 text-sm mb-4">
+                        <TransitionText>{t('dashboard.or')}</TransitionText>
+                      </p>
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-md transition-colors duration-200"
@@ -234,13 +245,15 @@ export default function ThumbnailGenerator() {
                         {isUploading ? (
                           <span className="flex items-center">
                             <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                            Uploading...
+                            <TransitionText>{t('dashboard.uploading')}</TransitionText>
                           </span>
                         ) : (
-                          "Browse Files"
+                          <TransitionText>{t('dashboard.browseFiles')}</TransitionText>
                         )}
                       </button>
-                      <p className="text-zinc-500 text-xs mt-4">Supported formats: JPG, PNG, GIF (Max size: 5MB)</p>
+                      <p className="text-zinc-500 text-xs mt-4">
+                        <TransitionText>{t('dashboard.supportedFormats')}</TransitionText>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -251,18 +264,18 @@ export default function ThumbnailGenerator() {
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
               <div className="mb-4">
                 <label htmlFor="trigger" className="block text-white font-medium mb-2">
-                  Trigger Keyword
+                  <TransitionText>{t('dashboard.triggerKeyword')}</TransitionText>
                 </label>
                 <input
                   type="text"
                   id="trigger"
                   value={trigger}
                   onChange={(e) => setTrigger(e.target.value)}
-                  placeholder="Enter a keyword to associate with these thumbnails"
+                  placeholder={t('dashboard.keywordPlaceholder')}
                   className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none"
                 />
                 <p className="text-zinc-500 text-xs mt-2">
-                  This keyword will help you find and organize your thumbnails
+                  <TransitionText>{t('dashboard.keywordHelper')}</TransitionText>
                 </p>
               </div>
             </div>
@@ -274,25 +287,27 @@ export default function ThumbnailGenerator() {
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
               <div className="mb-4">
                 <label htmlFor="prompt" className="block text-white font-medium mb-2">
-                  Prompt
+                  <TransitionText>{t('dashboard.prompt')}</TransitionText>
                 </label>
                 <textarea
                   id="prompt"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe how you want your thumbnails to look..."
+                  placeholder={t('dashboard.promptPlaceholder')}
                   rows={5}
                   className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none resize-none"
                 />
                 <p className="text-zinc-500 text-xs mt-2">
-                  Be specific about colors, mood, composition, and elements you want to include
+                  <TransitionText>{t('dashboard.promptHelper')}</TransitionText>
                 </p>
               </div>
             </div>
 
             {/* Style Selection */}
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Choose a Style</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                <TransitionText>{t('dashboard.chooseStyle')}</TransitionText>
+              </h2>
               <StyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
             </div>
 
@@ -311,18 +326,20 @@ export default function ThumbnailGenerator() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="animate-spin h-5 w-5" />
-                    Generating...
+                    <TransitionText>{t('dashboard.generating')}</TransitionText>
                   </>
                 ) : (
                   <>
                     <Wand2 className="h-5 w-5" />
-                    Generate Thumbnails
+                    <TransitionText>{t('dashboard.generateThumbnails')}</TransitionText>
                   </>
                 )}
               </button>
 
               {uploadedImages.length === 0 && (
-                <p className="text-zinc-500 text-xs text-center mt-2">Please upload at least one image</p>
+                <p className="text-zinc-500 text-xs text-center mt-2">
+                  <TransitionText>{t('dashboard.pleaseUpload')}</TransitionText>
+                </p>
               )}
             </div>
           </div>

@@ -11,13 +11,11 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await signInWithGoogle()
-      if (!error) {
-        onClose()
-        router.push('/dashboard')
-      }
+      await signInWithGoogle()
+      // The redirect will be handled by the OAuth flow
     } catch (error) {
-      console.error('Error signing in with Google:', error)
+      console.error('Failed to sign in with Google:', error)
+      // You might want to show an error message to the user here
     }
   }
 

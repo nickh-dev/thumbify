@@ -9,6 +9,8 @@ const AuthContext = createContext({})
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -72,24 +74,18 @@ export function AuthProvider({ children }) {
         },
       })
 
-      if (error) {
-        console.error('Google sign-in error:', error)
-        throw new Error(error.message || 'Failed to sign in with Google')
-      }
-
-      // If we get here without a redirect, something went wrong
-      if (!data.url) {
-        console.error('No redirect URL received from Google sign-in')
-        throw new Error('Failed to initialize Google sign-in')
-      }
-
-      // Store the provider in session storage to handle the redirect properly
-      sessionStorage.setItem('authProvider', 'google')
+      if (error) throw error
       
-      return data
+      // Store the provider in sessionStorage for the callback
+      sessionStorage.setItem('provider', 'google')
+      
+      // Let the OAuth flow handle the redirect
+      if (data?.url) {
+        window.location.href = data.url
+      }
     } catch (error) {
-      console.error('Google sign-in process error:', error)
-      throw new Error(error.message || 'An error occurred during Google sign-in')
+      console.error('Error signing in with Google:', error)
+      setError(error.message)
     } finally {
       setLoading(false)
     }
@@ -159,15 +155,22 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const updateAvatar = async (url) => {
+    setAvatarUrl(url)
+  }
+
   const value = {
     user,
     loading,
+    error,
+    avatarUrl,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     updateUserMetadata,
     deleteUser,
+    updateAvatar,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

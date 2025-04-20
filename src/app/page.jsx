@@ -11,6 +11,7 @@ import FaqSection from "@/components/faq-section"
 import ScrollToTop from "@/components/scroll-to-top"
 import ContactForm from "@/components/contact-form"
 import LegalModal from "@/components/legal-modal"
+import ThumbnailShowcase from "@/components/thumbnail-showcase"
 
 export default function ThumbnailMagic() {
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false)
@@ -287,15 +288,7 @@ export default function ThumbnailMagic() {
               </div>
 
               <div className="md:w-2/5 mt-8 md:mt-0">
-                <div className="relative">
-                  <div className="absolute inset-0 border border-zinc-800 rounded-lg transform rotate-3"></div>
-                  <div className="absolute inset-0 border border-zinc-800 rounded-lg transform -rotate-3"></div>
-                  <img
-                    src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=400&fit=crop"
-                    alt="Thumbnail Example"
-                    className="relative z-10 rounded-lg border border-zinc-800"
-                  />
-                </div>
+                <ThumbnailShowcase />
               </div>
             </div>
           </div>

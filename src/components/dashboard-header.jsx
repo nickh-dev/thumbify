@@ -7,15 +7,16 @@ import { useAuth } from "@/lib/AuthContext"
 import { useRouter, usePathname } from "next/navigation"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { getSession } from "@/lib/supabase"
+import { useLanguage } from "@/lib/LanguageContext"
 
 export default function DashboardHeader() {
-  const { signOut, user } = useAuth()
+  const { signOut, user, avatarUrl: contextAvatarUrl, updateAvatar } = useAuth()
+  const { t } = useLanguage()
   const supabase = createClientComponentClient()
   const router = useRouter()
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState(null)
   const [displayName, setDisplayName] = useState("")
 
   useEffect(() => {
@@ -69,9 +70,9 @@ export default function DashboardHeader() {
           console.error('Error fetching profile:', error)
           // Fall back to Google avatar if available
           if (session.user.user_metadata?.avatar_url) {
-            setAvatarUrl(session.user.user_metadata.avatar_url)
+            updateAvatar(session.user.user_metadata.avatar_url)
           } else {
-            setAvatarUrl('/images/default-avatar.svg')
+            updateAvatar('/images/default-avatar.svg')
           }
           return
         }
@@ -89,9 +90,9 @@ export default function DashboardHeader() {
             if (!fileExists?.length) {
               // File doesn't exist in storage, fall back to Google avatar
               if (session.user.user_metadata?.avatar_url) {
-                setAvatarUrl(session.user.user_metadata.avatar_url)
+                updateAvatar(session.user.user_metadata.avatar_url)
               } else {
-                setAvatarUrl('/images/default-avatar.svg')
+                updateAvatar('/images/default-avatar.svg')
               }
               return
             }
@@ -106,15 +107,15 @@ export default function DashboardHeader() {
               console.error('Error getting signed URL:', signedUrlError)
               // Fall back to Google avatar if available
               if (session.user.user_metadata?.avatar_url) {
-                setAvatarUrl(session.user.user_metadata.avatar_url)
+                updateAvatar(session.user.user_metadata.avatar_url)
               } else {
-                setAvatarUrl('/images/default-avatar.svg')
+                updateAvatar('/images/default-avatar.svg')
               }
               return
             }
 
             if (signedUrlData?.signedUrl) {
-              setAvatarUrl(signedUrlData.signedUrl)
+              updateAvatar(signedUrlData.signedUrl)
             } else {
               throw new Error('No signed URL in response data')
             }
@@ -122,22 +123,22 @@ export default function DashboardHeader() {
             console.error('Error in avatar URL processing:', urlError)
             // Fall back to Google avatar if available
             if (session.user.user_metadata?.avatar_url) {
-              setAvatarUrl(session.user.user_metadata.avatar_url)
+              updateAvatar(session.user.user_metadata.avatar_url)
             } else {
-              setAvatarUrl('/images/default-avatar.svg')
+              updateAvatar('/images/default-avatar.svg')
             }
           }
         } else if (session.user.user_metadata?.avatar_url) {
           // If no profile avatar but Google avatar exists
-          setAvatarUrl(session.user.user_metadata.avatar_url)
+          updateAvatar(session.user.user_metadata.avatar_url)
         } else {
           // Set a default avatar if no avatar is available
-          setAvatarUrl('/images/default-avatar.svg')
+          updateAvatar('/images/default-avatar.svg')
         }
       } catch (error) {
         console.error('Error in fetchAvatar:', error)
         // Set a default avatar in case of any error
-        setAvatarUrl('/images/default-avatar.svg')
+        updateAvatar('/images/default-avatar.svg')
       }
     }
 
@@ -155,18 +156,18 @@ export default function DashboardHeader() {
 
   return (
     <header className="bg-[#0a0a0a] border-b border-zinc-800">
-      <div className="container mx-auto px-4">
+      <div className="w-full">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center ml-4">
             <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl tracking-tight text-white flex items-center gap-2">
-              <img src="/images/icon.png" alt="Thumbify icon" className="h-8 w-8" />
-              Thumbify
+              <img src="/images/icon.png" alt="Thumbify icon" className="h-7 w-7" />
+              <span>Thumbify</span>
             </Link>
           </div>
 
           {/* User Menu (Desktop) */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2 mr-4">
             <Link 
               href="/dashboard/history" 
               className={`text-xs px-3 py-1.5 rounded-md transition-colors duration-200 ${
@@ -175,16 +176,16 @@ export default function DashboardHeader() {
                   : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'
               }`}
             >
-              History
+              {t('header.history')}
             </Link>
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-zinc-800 transition-colors duration-200"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800 transition-colors duration-200"
               >
                 <div className="w-8 h-8 bg-zinc-700 rounded-full overflow-hidden flex items-center justify-center text-white">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="User avatar" className="w-full h-full object-cover" />
+                  {contextAvatarUrl ? (
+                    <img src={contextAvatarUrl} alt="User avatar" className="w-full h-full object-cover" />
                   ) : (
                     <User className="h-4 w-4" />
                   )}
@@ -200,7 +201,7 @@ export default function DashboardHeader() {
                     onClick={() => setIsUserMenuOpen(false)}
                   >
                     <User className="h-4 w-4" />
-                    Profile
+                    {t('header.profile')}
                   </Link>
                   <Link
                     href="/dashboard/account?tab=settings"
@@ -208,14 +209,14 @@ export default function DashboardHeader() {
                     onClick={() => setIsUserMenuOpen(false)}
                   >
                     <Settings className="h-4 w-4" />
-                    Settings
+                    {t('header.settings')}
                   </Link>
                   <button 
                     onClick={handleSignOut}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white w-full text-left"
                   >
                     <LogOut className="h-4 w-4" />
-                    Sign out
+                    {t('header.signOut')}
                   </button>
                 </div>
               )}
@@ -241,7 +242,7 @@ export default function DashboardHeader() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <History className="h-5 w-5" />
-            History
+            {t('header.history')}
           </Link>
           <Link
             href="/dashboard/account?tab=profile"
@@ -249,7 +250,7 @@ export default function DashboardHeader() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <User className="h-5 w-5" />
-            Profile
+            {t('header.profile')}
           </Link>
           <Link
             href="/dashboard/account?tab=settings"
@@ -257,14 +258,14 @@ export default function DashboardHeader() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <Settings className="h-5 w-5" />
-            Settings
+            {t('header.settings')}
           </Link>
           <button 
             onClick={handleSignOut}
             className="flex items-center gap-2 py-2 text-zinc-400 hover:text-white w-full text-left"
           >
             <LogOut className="h-5 w-5" />
-            Sign out
+            {t('header.signOut')}
           </button>
           <div className="flex items-center gap-2 py-2 text-zinc-400">
             <User className="h-5 w-5" />

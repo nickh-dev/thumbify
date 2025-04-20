@@ -7,12 +7,14 @@ import ProfileSection from "./profile-section"
 import SettingsSection from "./settings-section"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { User, Settings } from "lucide-react"
+import { useLanguage } from "@/lib/LanguageContext"
 
 export default function UserDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(tabParam === 'settings' ? 'settings' : 'profile')
+  const { t } = useLanguage()
 
   // Update active tab when URL parameter changes
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function UserDashboard() {
                 >
                   <div className="flex items-center gap-2 text-zinc-400 group-data-[state=active]:text-white transition-colors duration-200">
                     <User className="h-4 w-4" />
-                    Profile
+                    {t('header.profile')}
                   </div>
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]" />
                 </TabsTrigger>
@@ -54,7 +56,7 @@ export default function UserDashboard() {
                 >
                   <div className="flex items-center gap-2 text-zinc-400 group-data-[state=active]:text-white transition-colors duration-200">
                     <Settings className="h-4 w-4" />
-                    Settings
+                    {t('header.settings')}
                   </div>
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white scale-x-0 group-data-[state=active]:scale-x-100 transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]" />
                 </TabsTrigger>
@@ -63,14 +65,14 @@ export default function UserDashboard() {
 
             <TabsContent 
               value="profile" 
-              className="mt-6 data-[state=inactive]:opacity-50 data-[state=inactive]:translate-y-2 data-[state=active]:translate-y-0 transition-all duration-200"
+              className="mt-6 focus-visible:outline-none"
             >
               <ProfileSection />
             </TabsContent>
 
             <TabsContent 
               value="settings" 
-              className="mt-6 data-[state=inactive]:opacity-50 data-[state=inactive]:translate-y-2 data-[state=active]:translate-y-0 transition-all duration-200"
+              className="mt-6 focus-visible:outline-none"
             >
               <SettingsSection />
             </TabsContent>

@@ -6,14 +6,20 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { useAuth } from "@/lib/AuthContext"
 import { createClient } from "@/lib/supabase"
+import { useLanguage } from "@/lib/LanguageContext"
 
 export default function ProfileSection() {
-  const { user, updateUser, updateUserMetadata } = useAuth()
+  const { user, updateUser, updateUserMetadata, updateAvatar } = useAuth()
+  const { t } = useLanguage()
   const supabase = createClient()
   const [isEditingUsername, setIsEditingUsername] = useState(false)
   const [username, setUsername] = useState("")
   const [tempUsername, setTempUsername] = useState("")
-  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(() => {
+    // Try to get cached avatar URL first
+    const cachedUrl = sessionStorage.getItem(`avatar_${user?.id}`);
+    return cachedUrl || user?.user_metadata?.avatar_url || null;
+  })
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [userData, setUserData] = useState(null)
@@ -21,285 +27,165 @@ export default function ProfileSection() {
   const fileInputRef = useRef(null)
   const [isResendingEmail, setIsResendingEmail] = useState(false)
   const [resendEmailStatus, setResendEmailStatus] = useState(null)
+  const avatarImageRef = useRef(null)
+
+  // Preload avatar image
+  useEffect(() => {
+    if (avatarUrl) {
+      const img = new Image();
+      img.src = avatarUrl;
+      avatarImageRef.current = img;
+      
+      // Cache the avatar URL
+      sessionStorage.setItem(`avatar_${user?.id}`, avatarUrl);
+    }
+  }, [avatarUrl, user?.id]);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user) {
-        console.log('No user found in AuthContext, skipping profile fetch')
-        return
-      }
+      if (!user) return;
 
       try {
-        console.log('Starting fetchUserData with user:', {
-          id: user.id,
-          email: user.email,
-          isAuthenticated: !!user
-        })
-        
-        // Get fresh Supabase client for each request
-        const supabase = createClient()
-        
-        // First verify the session is active
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          return
-        }
-        
-        if (!session) {
-          console.error('No active session found')
-          return
-        }
-        
-        console.log('Active session found for user:', session.user.id)
-        
-        // Fetch profile data
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-
-        if (error) {
-          console.error('Error fetching profile:', {
-            code: error.code,
-            message: error.message,
-            details: error.details
-          })
+        const cachedProfile = sessionStorage.getItem(`profile_${user.id}`);
+        if (cachedProfile) {
+          const profile = JSON.parse(cachedProfile);
+          setUserData(profile);
+          setUsername(profile.username || user.email?.split('@')[0] || 'user');
+          setTempUsername(profile.username || user.email?.split('@')[0] || 'user');
           
-          // If no profile exists yet, create one
-          if (error.code === 'PGRST116') {
-            console.log('No profile found, creating new profile for user:', session.user.id)
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert([
-                { 
-                  id: session.user.id, 
-                  username: session.user.email?.split('@')[0] || 'user',
-                  avatar_url: null
-                }
-              ])
-              .select()
-              .single()
+          // Check if we need to refresh the signed URL
+          if (profile.avatar_url) {
+            const { data: avatarData } = await supabase
+              .storage
+              .from('avatars')
+              .createSignedUrl(profile.avatar_url, 3600);
             
-            if (createError) {
-              console.error('Error creating profile:', {
-                code: createError.code,
-                message: createError.message,
-                details: createError.details
-              })
-              throw createError
+            if (avatarData?.signedUrl) {
+              setAvatarUrl(avatarData.signedUrl);
+              sessionStorage.setItem(`avatar_${user.id}`, avatarData.signedUrl);
             }
-            
-            if (newProfile) {
-              console.log('New profile created successfully:', newProfile)
-              setUserData(newProfile)
-              setUsername(newProfile.username)
-              setTempUsername(newProfile.username)
-            }
-          } else {
-            throw error
           }
-        } else if (data) {
-          console.log('Profile found:', data)
-          setUserData(data)
-          setUsername(data.username || session.user.email?.split('@')[0] || 'user')
-          setTempUsername(data.username || session.user.email?.split('@')[0] || 'user')
-          
-          // If user has a custom avatar, get it from storage
-          if (data.avatar_url) {
-            try {
-              // First check if the file exists in storage
-              const { data: fileExists } = await supabase
-                .storage
-                .from('avatars')
-                .list('', {
-                  search: data.avatar_url
-                })
+          return;
+        }
 
-              if (!fileExists?.length) {
-                console.log('Avatar file not found in storage, falling back to default')
-                // Clear the avatar_url from the profile since the file doesn't exist
-                const { error: updateError } = await supabase
-                  .from('profiles')
-                  .update({ avatar_url: null })
-                  .eq('id', session.user.id)
-                
-                if (updateError) {
-                  console.error('Error clearing invalid avatar_url:', updateError)
-                }
-                
-                // Fall back to Google avatar if available
-                if (session.user.user_metadata?.avatar_url) {
-                  setAvatarUrl(session.user.user_metadata.avatar_url)
-                }
-                return
-              }
+        // Fetch profile data in parallel with session check
+        const [sessionResult, profileResult] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase.from('profiles').select('*').eq('id', user.id).single()
+        ]);
 
-              console.log('Fetching signed URL for avatar:', data.avatar_url)
-              const { data: avatarData, error: urlError } = await supabase
-                .storage
-                .from('avatars')
-                .createSignedUrl(data.avatar_url, 3600)
-              
-              if (urlError) {
-                console.error('Error getting signed URL:', urlError)
-                // Fall back to Google avatar if available
-                if (session.user.user_metadata?.avatar_url) {
-                  setAvatarUrl(session.user.user_metadata.avatar_url)
-                }
-                return
-              }
-              
-              if (avatarData?.signedUrl) {
-                console.log('Setting avatar URL from storage:', avatarData.signedUrl)
-                setAvatarUrl(avatarData.signedUrl)
-              }
-            } catch (urlError) {
-              console.error('Error in avatar URL processing:', urlError)
-              // Fall back to Google avatar if available
-              if (session.user.user_metadata?.avatar_url) {
-                setAvatarUrl(session.user.user_metadata.avatar_url)
-              }
+        if (sessionResult.error || !sessionResult.data.session) return;
+        const session = sessionResult.data.session;
+
+        if (profileResult.error && profileResult.error.code === 'PGRST116') {
+          const newProfile = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            avatar_url: null
+          };
+
+          const { data } = await supabase
+            .from('profiles')
+            .insert([newProfile])
+            .select()
+            .single();
+
+          if (data) {
+            setUserData(data);
+            setUsername(data.username);
+            setTempUsername(data.username);
+            sessionStorage.setItem(`profile_${user.id}`, JSON.stringify(data));
+          }
+        } else if (profileResult.data) {
+          const profile = profileResult.data;
+          setUserData(profile);
+          setUsername(profile.username || session.user.email?.split('@')[0] || 'user');
+          setTempUsername(profile.username || session.user.email?.split('@')[0] || 'user');
+          sessionStorage.setItem(`profile_${user.id}`, JSON.stringify(profile));
+
+          if (profile.avatar_url) {
+            const { data: avatarData } = await supabase
+              .storage
+              .from('avatars')
+              .createSignedUrl(profile.avatar_url, 3600);
+            
+            if (avatarData?.signedUrl) {
+              setAvatarUrl(avatarData.signedUrl);
+              sessionStorage.setItem(`avatar_${user.id}`, avatarData.signedUrl);
             }
-          } else if (session.user.user_metadata?.avatar_url) {
-            // If no profile avatar but Google avatar exists
-            setAvatarUrl(session.user.user_metadata.avatar_url)
           }
         }
       } catch (error) {
-        console.error('Error in fetchUserData:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          details: error.details
-        })
+        console.error('Error in fetchUserData:', error);
       }
-    }
+    };
 
-    fetchUserData()
-  }, [user])
+    fetchUserData();
+  }, [user]);
 
+  // Update cache when avatar changes
   const handleAvatarChange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
-    setIsUploading(true)
-    setUploadError(null)
+    setIsUploading(true);
+    setUploadError(null);
 
     try {
-      if (!user) {
-        throw new Error("You must be logged in to upload an avatar")
-      }
+      if (!user) throw new Error("You must be logged in to upload an avatar");
+      if (!file.type.startsWith("image/")) throw new Error("Please upload an image file");
+      if (file.size > 5 * 1024 * 1024) throw new Error("File size must be less than 5MB");
 
-      // Validate file type and size
-      if (!file.type.startsWith("image/")) {
-        throw new Error("Please upload an image file")
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error("File size must be less than 5MB")
-      }
-
-      // Create preview
-      const reader = new FileReader()
+      // Create preview and preload it
+      const reader = new FileReader();
       reader.onload = (event) => {
-        setAvatarPreview(event.target.result)
-      }
-      reader.readAsDataURL(file)
+        setAvatarPreview(event.target.result);
+        const img = new Image();
+        img.src = event.target.result;
+        avatarImageRef.current = img;
+      };
+      reader.readAsDataURL(file);
 
-      // Get fresh Supabase client
-      const supabase = createClient()
-      
-      // Use a more structured file path
-      const filePath = `${user.id}/${file.name}`
+      const filePath = `${user.id}/${file.name}`;
 
-      console.log('Preparing to upload avatar:', {
-        filePath,
-        fileSize: file.size,
-        fileType: file.type,
-        userId: user.id
-      })
-
-      // Delete old avatar if exists
       if (userData?.avatar_url) {
-        try {
-          console.log('Attempting to remove old avatar:', userData.avatar_url)
-          const { error: removeError } = await supabase
-            .storage
-            .from('avatars')
-            .remove([userData.avatar_url])
-          
-          if (removeError) {
-            console.error('Error removing old avatar:', removeError)
-          } else {
-            console.log('Successfully removed old avatar')
-          }
-        } catch (removeError) {
-          console.error('Error in remove operation:', removeError)
-        }
+        await supabase.storage.from('avatars').remove([userData.avatar_url]);
       }
 
-      // Upload new avatar
-      console.log('Uploading avatar to path:', filePath)
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('avatars')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true,
-          metadata: {
-            owner: user.id,
-            mimetype: file.type
-          }
-        })
+          upsert: true
+        });
 
-      if (uploadError) {
-        console.error('Upload error details:', uploadError)
-        throw new Error(`Upload failed: ${uploadError.message || 'Unknown error'}`)
-      }
+      if (uploadError) throw uploadError;
 
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: filePath })
-        .eq('id', user.id)
-
-      if (updateError) {
-        console.error('Profile update error:', updateError)
-        throw new Error(`Failed to update profile: ${updateError.message}`)
-      }
-
-      // Get signed URL for immediate display
-      const { data: urlData, error: urlError } = await supabase
+      const { data: urlData } = await supabase
         .storage
         .from('avatars')
-        .createSignedUrl(filePath, 3600)
-
-      if (urlError) {
-        console.error('Signed URL error:', urlError)
-        throw new Error(`Failed to get signed URL: ${urlError.message}`)
-      }
+        .createSignedUrl(filePath, 3600);
 
       if (urlData?.signedUrl) {
-        console.log('Setting avatar URL:', urlData.signedUrl)
-        setAvatarUrl(urlData.signedUrl)
-        setAvatarPreview(null)
+        setAvatarUrl(urlData.signedUrl);
+        setAvatarPreview(null);
+        updateAvatar(urlData.signedUrl);
         
-        // Update local userData
-        setUserData(prev => ({
-          ...prev,
-          avatar_url: filePath
-        }))
+        // Update caches
+        sessionStorage.setItem(`avatar_${user.id}`, urlData.signedUrl);
+        const updatedProfile = { ...userData, avatar_url: filePath };
+        sessionStorage.setItem(`profile_${user.id}`, JSON.stringify(updatedProfile));
+        setUserData(updatedProfile);
       }
     } catch (error) {
-      console.error('Error uploading avatar:', error)
-      setUploadError(error.message || 'An unknown error occurred')
-      setAvatarPreview(null)
+      console.error('Error uploading avatar:', error);
+      setUploadError(error.message || 'An unknown error occurred');
+      setAvatarPreview(null);
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
   const handleUsernameEdit = () => {
     setIsEditingUsername(true)
@@ -389,11 +275,13 @@ export default function ProfileSection() {
             <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
               {avatarPreview || avatarUrl ? (
                 <img
+                  ref={avatarImageRef}
                   src={avatarPreview || avatarUrl}
                   alt="User avatar"
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="sync"
                   onError={(e) => {
-                    console.error('Error loading avatar image:', e);
                     e.target.style.display = 'none';
                     e.target.parentElement.innerHTML = `<span class="text-4xl text-zinc-400">${username?.charAt(0).toUpperCase()}</span>`;
                   }}
@@ -454,6 +342,7 @@ export default function ProfileSection() {
                   <button
                     onClick={handleUsernameEdit}
                     className="p-1.5 bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors"
+                    title={t('profile.editUsername')}
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
@@ -466,12 +355,12 @@ export default function ProfileSection() {
               <div className="flex items-center gap-2">
                 <span className="text-zinc-400">{user?.email}</span>
                 {user?.app_metadata?.provider === 'google' ? (
-                  <span className="px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded-full">Verified with Google</span>
+                  <span className="px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded-full">{t('profile.verifiedWithGoogle')}</span>
                 ) : user?.email_confirmed_at ? (
-                  <span className="px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded-full">Verified</span>
+                  <span className="px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded-full">{t('profile.verified')}</span>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-yellow-900/30 text-yellow-500 text-xs rounded-full">Unverified</span>
+                    <span className="px-2 py-0.5 bg-yellow-900/30 text-yellow-500 text-xs rounded-full">{t('profile.unverified')}</span>
                     <button
                       onClick={handleResendConfirmation}
                       disabled={isResendingEmail}
@@ -485,10 +374,10 @@ export default function ProfileSection() {
                       {isResendingEmail ? (
                         <div className="flex items-center gap-1">
                           <div className="w-3 h-3 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Sending...</span>
+                          <span>{t('profile.sending')}</span>
                         </div>
                       ) : (
-                        "Resend confirmation"
+                        t('profile.resendConfirmation')
                       )}
                     </button>
                   </div>
@@ -509,7 +398,7 @@ export default function ProfileSection() {
 
             {/* Registration date */}
             <div className="text-sm text-zinc-500">
-              Member since {format(new Date(user?.created_at || new Date()), "MMMM d, yyyy")}
+              {t('profile.memberSince')} {format(new Date(user?.created_at || new Date()), "MMMM d, yyyy")}
             </div>
           </div>
         </div>
@@ -517,23 +406,23 @@ export default function ProfileSection() {
 
       {/* Plan Information */}
       <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Plan Information</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">{t('profile.planInformation')}</h3>
 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <div>
               <span className="text-white font-medium">{userData?.plan || 'Free'}</span>
-              <span className="text-zinc-400"> – {userData?.thumbnails_limit || 50} thumbnails/month</span>
+              <span className="text-zinc-400"> – {userData?.thumbnails_limit || 50} {t('profile.thumbnailsMonth')}</span>
             </div>
             <button className="px-4 py-1.5 bg-white text-black font-medium rounded-md hover:bg-zinc-200 transition-colors">
-              Upgrade Plan
+              {t('profile.upgradePlan')}
             </button>
           </div>
 
           <div className="mb-1 flex justify-between text-sm">
-            <span className="text-zinc-400">Usage</span>
+            <span className="text-zinc-400">{t('profile.usage')}</span>
             <span className="text-zinc-400">
-              {userData?.thumbnails_used || 0} / {userData?.thumbnails_limit || 50} thumbnails used
+              {userData?.thumbnails_used || 0} / {userData?.thumbnails_limit || 50} {t('profile.thumbnailsUsed')}
             </span>
           </div>
 
@@ -551,7 +440,7 @@ export default function ProfileSection() {
 
         {userData?.next_billing_date && (
           <div className="text-sm text-zinc-400">
-            Next billing date: {format(new Date(userData.next_billing_date), "MMMM d, yyyy")}
+            {t('profile.nextBillingDate')}: {format(new Date(userData.next_billing_date), "MMMM d, yyyy")}
           </div>
         )}
       </div>

@@ -6,9 +6,10 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import DeleteAccountDialog from "./delete-account-dialog"
+import { useLanguage } from "@/lib/LanguageContext"
 
 export default function SettingsSection() {
-  const [language, setLanguage] = useState("english")
+  const { language, setLanguage, t } = useLanguage()
   const [emailNotifications, setEmailNotifications] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -22,7 +23,9 @@ export default function SettingsSection() {
     <div className="space-y-8">
       {/* Language Settings */}
       <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Language</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          {t('settings.language')}
+        </h3>
 
         <div className="max-w-xs">
           <Select value={language} onValueChange={setLanguage}>
@@ -31,8 +34,7 @@ export default function SettingsSection() {
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
               <SelectItem value="english">English</SelectItem>
-              <SelectItem value="russian">Russian</SelectItem>
-              <SelectItem value="spanish">Spanish</SelectItem>
+              <SelectItem value="russian">Русский</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -40,14 +42,18 @@ export default function SettingsSection() {
 
       {/* Email Notifications */}
       <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Email Notifications</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          {t('settings.emailNotifications')}
+        </h3>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h4 className="text-white font-medium">Product updates</h4>
+              <h4 className="text-white font-medium">
+                {t('settings.productUpdates')}
+              </h4>
               <p className="text-sm text-zinc-400">
-                Receive emails about new features and improvements
+                {t('settings.productUpdatesDesc')}
               </p>
             </div>
             <Switch
@@ -62,18 +68,22 @@ export default function SettingsSection() {
       {/* Experimental Features */}
       <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-lg font-semibold text-white">Experimental Features</h3>
+          <h3 className="text-lg font-semibold text-white">
+            {t('settings.experimentalFeatures')}
+          </h3>
           <span className="px-2 py-0.5 text-xs bg-purple-900/50 text-purple-400 border border-purple-800/50 rounded-full">
-            Beta
+            {t('settings.beta')}
           </span>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h4 className="text-white font-medium">Enable animated thumbnails</h4>
+              <h4 className="text-white font-medium">
+                {t('settings.animatedThumbnails')}
+              </h4>
               <p className="text-sm text-zinc-400">
-                Generate animated GIF thumbnails (coming soon)
+                {t('settings.animatedThumbnailsDesc')}
               </p>
             </div>
             <Switch
@@ -91,9 +101,11 @@ export default function SettingsSection() {
 
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h4 className="text-white font-medium">Auto keyword analysis</h4>
+              <h4 className="text-white font-medium">
+                {t('settings.autoKeywords')}
+              </h4>
               <p className="text-sm text-zinc-400">
-                Automatically suggest keywords based on your thumbnail content (coming soon)
+                {t('settings.autoKeywordsDesc')}
               </p>
             </div>
             <Switch
@@ -113,7 +125,9 @@ export default function SettingsSection() {
 
       {/* Data & Privacy */}
       <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Data & Privacy</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          {t('settings.dataPrivacy')}
+        </h3>
 
         <div className="space-y-4">
           <div className="flex flex-col space-y-2">
@@ -122,9 +136,11 @@ export default function SettingsSection() {
               className="px-4 py-2 bg-red-900/20 text-red-500 border border-red-900/30 rounded-md hover:bg-red-900/30 transition-colors text-sm font-medium w-fit flex items-center"
             >
               <AlertCircle className="h-4 w-4 mr-2" />
-              Delete account
+              {t('settings.deleteAccount')}
             </button>
-            <p className="text-xs text-zinc-500">This will permanently delete your account and all associated data.</p>
+            <p className="text-xs text-zinc-500">
+              {t('settings.deleteAccountDesc')}
+            </p>
           </div>
         </div>
       </div>
