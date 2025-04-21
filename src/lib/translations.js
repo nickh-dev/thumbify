@@ -46,7 +46,8 @@ export const translations = {
       },
       triggerKeyword: "Ключевое слово",
       keywordPlaceholder: "Введите ключевое слово для связи с этими миниатюрами",
-      keywordHelper: "Это ключевое слово поможет вам найти и организовать ваши миниатюры"
+      keywordHelper: "Это ключевое слово поможет вам найти и организовать ваши миниатюры",
+      accountDashboard: "Панель управления аккаунтом"
     },
     header: {
       history: "История",
@@ -83,13 +84,17 @@ export const translations = {
       usage: "Использование",
       thumbnailsUsed: "использовано миниатюр",
       nextBillingDate: "Следующая дата оплаты"
+    },
+    history: {
+      title: "История генерации",
+      empty: "Ваша история генерации миниатюр появится здесь."
     }
   },
   english: {
     dashboard: {
       welcome: "Welcome,",
       createManage: "Create and manage your thumbnails",
-      createNew: "Create New Thumbnails",
+      createNew: "Create New Thumbnail",
       uploadImages: "Upload Images",
       dragDrop: "Drag and drop your images here",
       or: "or",
@@ -131,8 +136,9 @@ export const translations = {
         }
       },
       triggerKeyword: "Trigger Keyword",
-      keywordPlaceholder: "Enter a keyword to associate with these thumbnails",
-      keywordHelper: "This keyword will help you find and organize your thumbnails"
+      keywordPlaceholder: "# Enter a keyword to associate with these thumbnails",
+      keywordHelper: "This keyword will help you find and organize your thumbnails",
+      accountDashboard: "Account Dashboard"
     },
     header: {
       history: "History",
@@ -169,6 +175,10 @@ export const translations = {
       usage: "Usage",
       thumbnailsUsed: "thumbnails used",
       nextBillingDate: "Next billing date"
+    },
+    history: {
+      title: "Generation History",
+      empty: "Your thumbnail generation history will appear here."
     }
   }
 } 

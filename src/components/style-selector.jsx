@@ -1,115 +1,190 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import { useLanguage } from "@/lib/LanguageContext"
-import TransitionText from "./ui/transition-text"
+import { useState } from "react"
 
 export default function StyleSelector({ selectedStyle, onSelectStyle }) {
-  const { t } = useLanguage()
-  const [styleImages, setStyleImages] = useState({})
-  const [isLoading, setIsLoading] = useState(true)
+  const [instagramMode, setInstagramMode] = useState('feed')
 
-  // Sample style options with fallback images
-  const styles = [
+  const formats = [
     {
-      id: "minimal",
-      name: t('dashboard.styles.minimal.title'),
-      description: t('dashboard.styles.minimal.description'),
-      query: "minimal design",
-      fallback: "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=400&h=300&fit=crop"
+      id: "youtube",
+      name: "YouTube",
+      dimensions: "1280 × 720",
+      aspectRatio: "16:9",
+      image: "/images/youtube.png",
+      description: "Perfect for video thumbnails, channel art, and engaging preview images. Optimized for desktop and mobile viewing.",
+      color: "bg-gradient-to-br from-red-950/50 to-red-900/30",
+      borderColor: "border-red-800/30",
+      iconColor: "text-red-400",
+      hoverBorder: "hover:border-red-700/50"
     },
     {
-      id: "neon",
-      name: t('dashboard.styles.neonCyberpunk.title'),
-      description: t('dashboard.styles.neonCyberpunk.description'),
-      query: "neon cyberpunk",
-      fallback: "https://images.unsplash.com/photo-1515630278258-407f66498911?w=400&h=300&fit=crop"
+      id: "instagram",
+      name: "Instagram",
+      modes: {
+        feed: {
+          dimensions: "1080 × 1080",
+          displaySize: "510 × 510",
+          aspectRatio: "1:1",
+          description: "Square format for feed preview"
+        },
+        post: {
+          dimensions: "1080 × 1440",
+          aspectRatio: "3:4",
+          description: "Vertical format for optimal viewing"
+        }
+      },
+      image: "/images/instagram.png",
+      color: "bg-gradient-to-br from-purple-950/50 to-fuchsia-900/30",
+      borderColor: "border-purple-800/30",
+      iconColor: "text-purple-400",
+      hoverBorder: "hover:border-purple-700/50"
     },
     {
-      id: "cinematic",
-      name: t('dashboard.styles.cinematic.title'),
-      description: t('dashboard.styles.cinematic.description'),
-      query: "cinematic lighting",
-      fallback: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=300&fit=crop"
-    },
-    {
-      id: "retro",
-      name: t('dashboard.styles.retro.title'),
-      description: t('dashboard.styles.retro.description'),
-      query: "vintage retro",
-      fallback: "https://images.unsplash.com/photo-1513519245088-0e12902e35a6?w=400&h=300&fit=crop"
-    },
-    {
-      id: "abstract",
-      name: t('dashboard.styles.abstract.title'),
-      description: t('dashboard.styles.abstract.description'),
-      query: "abstract art",
-      fallback: "https://images.unsplash.com/photo-1549490349-8643362247b5?w=400&h=300&fit=crop"
-    },
-    {
-      id: "3d",
-      name: t('dashboard.styles.threeD.title'),
-      description: t('dashboard.styles.threeD.description'),
-      query: "3d render",
-      fallback: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop"
-    },
+      id: "tiktok",
+      name: "TikTok",
+      dimensions: "1080 × 1920",
+      aspectRatio: "9:16",
+      image: "/images/tiktok.png",
+      description: "Vertical format for short-form content",
+      color: "bg-gradient-to-br from-emerald-950/50 to-teal-900/30",
+      borderColor: "border-emerald-800/30",
+      iconColor: "text-emerald-400",
+      hoverBorder: "hover:border-emerald-700/50"
+    }
   ]
 
-  useEffect(() => {
-    const fetchStyleImages = async () => {
-      setIsLoading(true)
-      const newStyleImages = {}
-      
-      for (const style of styles) {
-        try {
-          // Use the Unsplash Source API which doesn't require authentication
-          const imageUrl = `https://source.unsplash.com/featured/400x300?${encodeURIComponent(style.query)}`
-          newStyleImages[style.id] = imageUrl
-        } catch (error) {
-          console.error(`Error fetching image for ${style.id}:`, error)
-          newStyleImages[style.id] = style.fallback
-        }
-      }
-      
-      setStyleImages(newStyleImages)
-      setIsLoading(false)
+  const handleInstagramClick = (format) => {
+    if (format.id === 'instagram') {
+      onSelectStyle('instagram-' + instagramMode)
+    } else {
+      onSelectStyle(format.id)
     }
-
-    fetchStyleImages()
-  }, [])
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {styles.map((style) => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {formats.map((format) => (
         <div
-          key={style.id}
+          key={format.id}
           className={cn(
-            "border rounded-lg p-4 cursor-pointer transition-all duration-200",
-            selectedStyle === style.id ? "border-white bg-zinc-800" : "border-zinc-700 hover:border-zinc-500",
+            "relative border rounded-xl p-6 cursor-pointer transition-all duration-300 flex flex-col min-h-[420px] backdrop-blur-sm bg-black/20",
+            format.color,
+            format.borderColor,
+            format.hoverBorder,
+            (selectedStyle === format.id || 
+             (format.id === 'instagram' && 
+              (selectedStyle === 'instagram-feed' || selectedStyle === 'instagram-post'))) 
+              ? "ring-1 ring-white/10" : "",
           )}
-          onClick={() => onSelectStyle(style.id)}
+          onClick={() => handleInstagramClick(format)}
         >
-          <div className="flex flex-col gap-4">
-            <div className="w-full h-[180px] rounded-md overflow-hidden bg-zinc-800">
-              {isLoading ? (
-                <div className="w-full h-full animate-pulse bg-zinc-700" />
-              ) : (
-                <img 
-                  src={styleImages[style.id] || style.fallback} 
-                  alt={style.name} 
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              )}
+          {/* Header Section */}
+          <div className="relative mb-6">
+            {/* Platform Icon */}
+            <div className={cn("absolute -top-1 right-0 w-8 h-8 flex items-center justify-center bg-transparent")}>
+              <img 
+                src={format.image} 
+                alt={`${format.name} logo`}
+                className={cn(
+                  "object-contain",
+                  format.id === "tiktok" ? "w-6 h-6" : "w-5 h-5"
+                )}
+              />
             </div>
+            
+            {/* Title and Description */}
             <div>
-              <h3 className="text-white font-medium text-lg">
-                <TransitionText>{style.name}</TransitionText>
-              </h3>
-              <p className="text-zinc-400 text-sm mt-2">
-                <TransitionText>{style.description}</TransitionText>
+              <h3 className="text-white font-medium text-lg mb-2">{format.name}</h3>
+              <p className="text-zinc-400 text-sm h-12">
+                {format.id === 'instagram' 
+                  ? format.modes[instagramMode].description
+                  : format.description
+                }
               </p>
+            </div>
+          </div>
+
+          {/* Format Controls */}
+          {format.id === 'instagram' && (
+            <div className="mb-6">
+              <div className="inline-flex items-center bg-zinc-800/50 rounded-lg p-1">
+                <button
+                  className={cn(
+                    "text-sm px-4 py-1.5 rounded-md transition-all duration-200",
+                    instagramMode === 'feed' 
+                      ? "bg-purple-500/20 text-purple-200 shadow-sm" 
+                      : "text-zinc-400 hover:text-white"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setInstagramMode('feed')
+                    onSelectStyle('instagram-feed')
+                  }}
+                >
+                  Feed
+                </button>
+                <button
+                  className={cn(
+                    "text-sm px-4 py-1.5 rounded-md transition-all duration-200 ml-1",
+                    instagramMode === 'post' 
+                      ? "bg-purple-500/20 text-purple-200 shadow-sm" 
+                      : "text-zinc-400 hover:text-white"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setInstagramMode('post')
+                    onSelectStyle('instagram-post')
+                  }}
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preview Section */}
+          <div className="flex-grow flex flex-col justify-end">
+            {/* Aspect Ratio Visualization */}
+            <div className="relative mb-4">
+              <div 
+                className={cn(
+                  "w-full aspect-ratio-box transition-transform duration-300 transform hover:scale-105 backdrop-blur-sm bg-black/10",
+                  format.id === "youtube" && "aspect-video",
+                  format.id === "instagram" && instagramMode === "feed" && "aspect-square",
+                  format.id === "instagram" && instagramMode === "post" && "aspect-[3/4]",
+                  format.id === "tiktok" && "aspect-[9/16]",
+                  format.color
+                )}
+              >
+                {/* Dimension Lines */}
+                <div className="absolute inset-0 border border-dashed border-white/10" />
+              </div>
+            </div>
+
+            {/* Dimensions Text */}
+            <div className="text-center">
+              {format.id === 'instagram' ? (
+                <>
+                  <span className="text-sm font-mono text-zinc-400">
+                    {format.modes[instagramMode].dimensions}
+                  </span>
+                  {format.modes[instagramMode].displaySize && (
+                    <span className="text-xs text-zinc-500 block">
+                      Display: {format.modes[instagramMode].displaySize}
+                    </span>
+                  )}
+                  <span className="text-xs text-zinc-500 block">
+                    {format.modes[instagramMode].aspectRatio}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm font-mono text-zinc-400">{format.dimensions}</span>
+                  <span className="text-xs text-zinc-500 block">{format.aspectRatio}</span>
+                </>
+              )}
             </div>
           </div>
         </div>

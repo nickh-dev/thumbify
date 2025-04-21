@@ -15,11 +15,7 @@ export default function ProfileSection() {
   const [isEditingUsername, setIsEditingUsername] = useState(false)
   const [username, setUsername] = useState("")
   const [tempUsername, setTempUsername] = useState("")
-  const [avatarUrl, setAvatarUrl] = useState(() => {
-    // Try to get cached avatar URL first
-    const cachedUrl = sessionStorage.getItem(`avatar_${user?.id}`);
-    return cachedUrl || user?.user_metadata?.avatar_url || null;
-  })
+  const [avatarUrl, setAvatarUrl] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [userData, setUserData] = useState(null)
@@ -28,24 +24,30 @@ export default function ProfileSection() {
   const [isResendingEmail, setIsResendingEmail] = useState(false)
   const [resendEmailStatus, setResendEmailStatus] = useState(null)
   const avatarImageRef = useRef(null)
+  const [isLoadingAvatar, setIsLoadingAvatar] = useState(true)
+
+  // Move sessionStorage operations to useEffect
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user?.id && avatarUrl) {
+      sessionStorage.setItem(`avatar_${user.id}`, avatarUrl);
+    }
+  }, [user?.id, avatarUrl]);
 
   // Preload avatar image
   useEffect(() => {
-    if (avatarUrl) {
+    if (typeof window !== 'undefined' && avatarUrl) {
       const img = new Image();
       img.src = avatarUrl;
       avatarImageRef.current = img;
-      
-      // Cache the avatar URL
-      sessionStorage.setItem(`avatar_${user?.id}`, avatarUrl);
     }
-  }, [avatarUrl, user?.id]);
+  }, [avatarUrl]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user) return;
 
       try {
+        setIsLoadingAvatar(true);
         const cachedProfile = sessionStorage.getItem(`profile_${user.id}`);
         if (cachedProfile) {
           const profile = JSON.parse(cachedProfile);
@@ -64,7 +66,11 @@ export default function ProfileSection() {
               setAvatarUrl(avatarData.signedUrl);
               sessionStorage.setItem(`avatar_${user.id}`, avatarData.signedUrl);
             }
+          } else {
+            // Only use Google avatar if no custom avatar exists
+            setAvatarUrl(user.user_metadata?.avatar_url || null);
           }
+          setIsLoadingAvatar(false);
           return;
         }
 
@@ -113,10 +119,15 @@ export default function ProfileSection() {
               setAvatarUrl(avatarData.signedUrl);
               sessionStorage.setItem(`avatar_${user.id}`, avatarData.signedUrl);
             }
+          } else {
+            // Only use Google avatar if no custom avatar exists
+            setAvatarUrl(user.user_metadata?.avatar_url || null);
           }
         }
+        setIsLoadingAvatar(false);
       } catch (error) {
         console.error('Error in fetchUserData:', error);
+        setIsLoadingAvatar(false);
       }
     };
 
@@ -273,7 +284,11 @@ export default function ProfileSection() {
           {/* Avatar */}
           <div className="relative group">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
-              {avatarPreview || avatarUrl ? (
+              {isLoadingAvatar ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : avatarPreview || avatarUrl ? (
                 <img
                   ref={avatarImageRef}
                   src={avatarPreview || avatarUrl}

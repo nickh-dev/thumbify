@@ -7,6 +7,7 @@ import StyleSelector from "./style-selector"
 import DeleteConfirmDialog from "./delete-confirm-dialog"
 import { useLanguage } from "@/lib/LanguageContext"
 import TransitionText from "./ui/transition-text"
+import { generateImage } from "@/lib/openai"
 
 export default function ThumbnailGenerator() {
   const { t } = useLanguage()
@@ -20,6 +21,7 @@ export default function ThumbnailGenerator() {
   const [prompt, setPrompt] = useState("")
   const [trigger, setTrigger] = useState("")
   const [selectedStyle, setSelectedStyle] = useState(null)
+  const [generatedThumbnails, setGeneratedThumbnails] = useState([])
 
   const fileInputRef = useRef(null)
 
@@ -113,35 +115,58 @@ export default function ThumbnailGenerator() {
   }
 
   const handleGenerateThumbnail = async () => {
-    if (uploadedImages.length === 0) {
-      setError("Please upload at least one image")
-      return
-    }
-
-    if (!prompt.trim()) {
-      setError("Please enter a prompt for thumbnail generation")
-      return
-    }
-
-    if (!selectedStyle) {
-      setError("Please select a style for your thumbnail")
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-    setIsGenerating(true)
-
     try {
-      // Simulate API call for thumbnail generation
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-      setSuccess("Thumbnails generated successfully!")
+      setError(null);
+      setIsGenerating(true);
+
+      // Validate inputs
+      if (!prompt.trim()) {
+        setError('Please enter a prompt');
+        setIsGenerating(false);
+        return;
+      }
+
+      // Clean up the prompt to be more natural
+      const cleanPrompt = prompt.trim()
+        .replace(/\s+/g, ' ');  // Normalize whitespace
+
+      // Construct the full prompt with more natural language
+      const fullPrompt = [
+        cleanPrompt,
+        selectedStyle ? `in ${selectedStyle} style` : '',
+        trigger ? `incorporating ${trigger}` : ''
+      ].filter(Boolean).join(', ');
+
+      console.log('Generating thumbnail with prompt:', fullPrompt);
+
+      try {
+        // Generate the thumbnail
+        const imageUrl = await generateImage(fullPrompt);
+        console.log('Generated thumbnail URL:', imageUrl);
+
+        // Add the generated thumbnail to the list
+        setGeneratedThumbnails(prev => [...prev, {
+          id: Date.now(),
+          url: imageUrl,
+          prompt: fullPrompt,
+          style: selectedStyle,
+          triggerKeyword: trigger,
+        }]);
+
+        setIsGenerating(false);
+        setError(null);
+        setSuccess('Thumbnail generated successfully!');
+      } catch (genError) {
+        console.error('Error in generateImage function:', genError);
+        setError(genError.message);
+        setIsGenerating(false);
+      }
     } catch (err) {
-      setError("Failed to generate thumbnails. Please try again.")
-    } finally {
-      setIsGenerating(false)
+      console.error('Error generating thumbnail:', err);
+      setError(err.message);
+      setIsGenerating(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col">
@@ -169,9 +194,14 @@ export default function ThumbnailGenerator() {
           {/* Left Column - Image Upload */}
           <div className="space-y-6">
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                <TransitionText>{t('dashboard.uploadImages')}</TransitionText>
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-white">
+                  <TransitionText>{t('dashboard.uploadImages')}</TransitionText>
+                </h2>
+                <span className="px-3 py-1 bg-zinc-800 text-zinc-400 text-xs rounded-full border border-zinc-700">
+                  optional
+                </span>
+              </div>
 
               {/* Image Upload Area */}
               <div
@@ -262,22 +292,25 @@ export default function ThumbnailGenerator() {
 
             {/* Trigger Input */}
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <div className="mb-4">
-                <label htmlFor="trigger" className="block text-white font-medium mb-2">
+              <div className="flex justify-between items-center mb-4">
+                <label htmlFor="trigger" className="block text-white font-medium">
                   <TransitionText>{t('dashboard.triggerKeyword')}</TransitionText>
                 </label>
-                <input
-                  type="text"
-                  id="trigger"
-                  value={trigger}
-                  onChange={(e) => setTrigger(e.target.value)}
-                  placeholder={t('dashboard.keywordPlaceholder')}
-                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none"
-                />
-                <p className="text-zinc-500 text-xs mt-2">
-                  <TransitionText>{t('dashboard.keywordHelper')}</TransitionText>
-                </p>
+                <span className="px-3 py-1 bg-zinc-800 text-zinc-400 text-xs rounded-full border border-zinc-700">
+                  optional
+                </span>
               </div>
+              <input
+                type="text"
+                id="trigger"
+                value={trigger}
+                onChange={(e) => setTrigger(e.target.value)}
+                placeholder={t('dashboard.keywordPlaceholder')}
+                className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+              <p className="text-zinc-500 text-xs mt-2">
+                <TransitionText>{t('dashboard.keywordHelper')}</TransitionText>
+              </p>
             </div>
           </div>
 
@@ -285,29 +318,37 @@ export default function ThumbnailGenerator() {
           <div className="space-y-6">
             {/* Prompt Input */}
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <div className="mb-4">
-                <label htmlFor="prompt" className="block text-white font-medium mb-2">
+              <div className="flex justify-between items-center mb-4">
+                <label htmlFor="prompt" className="block text-white font-medium">
                   <TransitionText>{t('dashboard.prompt')}</TransitionText>
                 </label>
-                <textarea
-                  id="prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={t('dashboard.promptPlaceholder')}
-                  rows={5}
-                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none resize-none"
-                />
-                <p className="text-zinc-500 text-xs mt-2">
-                  <TransitionText>{t('dashboard.promptHelper')}</TransitionText>
-                </p>
+                <span className="px-3 py-1 bg-zinc-800/80 text-white text-xs rounded-full border border-zinc-600">
+                  required
+                </span>
               </div>
+              <textarea
+                id="prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={t('dashboard.promptPlaceholder')}
+                rows={5}
+                className="w-full bg-zinc-900 border border-zinc-700 focus:border-zinc-500 rounded-md px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none resize-none"
+              />
+              <p className="text-zinc-500 text-xs mt-2">
+                <TransitionText>{t('dashboard.promptHelper')}</TransitionText>
+              </p>
             </div>
 
             {/* Style Selection */}
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                <TransitionText>{t('dashboard.chooseStyle')}</TransitionText>
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-white">
+                  Choose a Format
+                </h2>
+                <span className="px-3 py-1 bg-zinc-800/80 text-white text-xs rounded-full border border-zinc-600">
+                  required
+                </span>
+              </div>
               <StyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
             </div>
 
@@ -315,7 +356,7 @@ export default function ThumbnailGenerator() {
             <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
               <button
                 onClick={handleGenerateThumbnail}
-                disabled={isGenerating || uploadedImages.length === 0}
+                disabled={isGenerating || !prompt.trim()}
                 className={cn(
                   "w-full py-3 rounded-md font-medium text-center transition-all duration-300 flex items-center justify-center gap-2",
                   isGenerating || uploadedImages.length === 0
@@ -336,12 +377,35 @@ export default function ThumbnailGenerator() {
                 )}
               </button>
 
-              {uploadedImages.length === 0 && (
+              {/* {uploadedImages.length === 0 && (
                 <p className="text-zinc-500 text-xs text-center mt-2">
                   <TransitionText>{t('dashboard.pleaseUpload')}</TransitionText>
                 </p>
-              )}
+              )} */}
             </div>
+
+            {/* Generated Thumbnail Display */}
+            {generatedThumbnails.length > 0 && (
+              <div className="bg-[#1a1a1a] border border-zinc-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-white mb-4">
+                  <TransitionText>{t('dashboard.generatedThumbnails')}</TransitionText>
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {generatedThumbnails.map((thumbnail) => (
+                    <div key={thumbnail.id} className="relative aspect-video w-full overflow-hidden rounded-lg">
+                      <img
+                        src={thumbnail.url}
+                        alt={`Generated thumbnail ${thumbnail.id}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-md flex items-center justify-center">
+                        <p className="text-zinc-300 text-sm">{thumbnail.prompt}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
